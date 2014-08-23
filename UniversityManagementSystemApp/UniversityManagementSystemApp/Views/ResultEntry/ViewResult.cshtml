@@ -1,0 +1,136 @@
+﻿@model IEnumerable<UniversityManagementSystemApp.Models.ViewModel.ViewResultModel>
+
+@{
+    ViewBag.Title = "View Result";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<div id="PDFContainer">
+    
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            <h2>View Result</h2>
+
+            <hr />
+            @Html.ValidationSummary(true)
+
+            <div class="form-group">
+                @Html.Label("StudentId", new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.DropDownList("StudentId", String.Empty)
+                    @*@Html.ValidationMessageFor(model => model.StudentId)*@
+                    <div id="StudentSelectionError">
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="Name" class="col-sm-2 control-label">Name</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="Name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="Email" class="col-sm-2 control-label">Email</label>
+                <div class="col-sm-10">
+                    <input type="text" readonly class="form-control" id="Email">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="Dept" class="col-sm-2 control-label">Dept</label>
+                <div class="col-sm-10">
+                    <input type="text" readonly class="form-control" id="Dept">
+                </div>
+            </div>
+        </div>
+    }
+    <button onclick="javascript:demoFromHTML();">Make PDF</button>
+    <div id="ViewEnrolledCoursesAndResult">
+
+    </div>
+</div>
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+    <script src="~/Scripts/jspdf.debug.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $("#StudentId").change(function() {
+                var optionSelected = $(this).find("option:selected");
+                var valueSelected = optionSelected.val();
+                if (valueSelected) {
+                    var json = { studentId: valueSelected };
+                    $.ajax({
+                        type: "POST",
+                        url: '@Url.Action("GetStudentInfo", "EnrollCourse")',
+                        contentType: "application/json; charset=utf-8",
+                        data: JSON.stringify(json),
+                        dataType: "json",
+                        success: function(data) {
+                            $("#Name").val(data.Name);
+                            $("#Email").val(data.Email);
+                            $("#Dept").val(data.Dept);
+                            var id = $("#StudentId").val();
+                            //alert(id);
+                            $("#ViewEnrolledCoursesAndResult").load("/ResultEntry/GetEnrollCourseAndResult", { studentId: id });
+                        }
+                    });
+                } else {
+                    $("#StudentSelectionError").show().text("Please select a student.").addClass("btn-danger").fadeOut(4000);
+                    $("#Name").val("");
+                    $("#Email").val("");
+                    $("#Dept").val("");
+                }
+            });
+            
+
+            
+        });
+    function demoFromHTML() {
+        //alert(7);
+        var pdf = new jsPDF('p', 'pt', 'letter');
+        // source can be HTML-formatted string, or a reference
+        // to an actual DOM element from which the text will be scraped.
+        source = $('#PDFContainer')[0];
+
+        // we support special element handlers. Register them with jQuery-style
+        // ID selector for either ID or node name. ("#iAmID", "div", "span" etc.)
+        // There is no support for any other type of selectors
+        // (class, of compound) at this time.
+        specialElementHandlers = {
+            // element with id of "bypass" - jQuery style selector
+            '#bypassme': function (element, renderer) {
+                // true = "handled elsewhere, bypass text extraction"
+                return true;
+            }
+        };
+        margins = {
+            top: 80,
+            bottom: 60,
+            left: 40,
+            width: 522
+        };
+        // all coords and widths are in jsPDF instance's declared units
+        // 'inches' in this case
+        pdf.fromHTML(
+            source, // HTML string or DOM elem ref.
+            margins.left, // x coord
+            margins.top, {
+                // y coord
+                'width': margins.width, // max width of content on PDF
+                'elementHandlers': specialElementHandlers
+            },
+            function (dispose) {
+                // dispose: object with X, Y of the last line add to the PDF
+                //          this allow the insertion of new lines after html
+                pdf.save('ViewResult.pdf');
+            }, margins);
+    }
+    </script>
+}
